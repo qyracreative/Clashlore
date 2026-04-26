@@ -1,0 +1,6 @@
+{
+  "name": "Cinematic AI Episode Generator",
+  "description": "Transform character histories and prompts into structured 30-scene cinematic scripts for short-form video.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
