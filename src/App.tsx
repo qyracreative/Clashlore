@@ -22,6 +22,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [cinematicMode, setCinematicMode] = useState(true);
   const [shortsMode, setShortsMode] = useState(false);
+  const [copiedSceneIndex, setCopiedSceneIndex] = useState<number | null>(null);
   const outputRef = useRef<HTMLDivElement>(null);
 
   // Handle URL Query Params
@@ -66,7 +67,7 @@ export default function App() {
   const copyToClipboard = () => {
     if (!result) return;
     const text = result.scenes.map(s => 
-      `Scene ${s.scene_number}:\n- Visual: ${s.visual}\n- Camera: ${s.camera}\n- Action: ${s.action}\n- Emotion: ${s.emotion}\n- Sound: ${s.sound}\n- Transition: ${s.transition}`
+      `Scene ${s.scene_number}:\n- Visual: ${s.visual}\n- Camera: ${s.camera}\n- Action: ${s.action}\n- Emotion: ${s.emotion}\n- Sound: ${s.sound}\n- Transition: ${s.transition}${s.narration ? `\n- Narration: ${s.narration}` : ""}${s.dialogue ? `\n- Dialogue: ${s.dialogue}` : ""}`
     ).join("\n\n");
     
     navigator.clipboard.writeText(text);
@@ -77,7 +78,7 @@ export default function App() {
   const downloadTxt = () => {
     if (!result) return;
     const text = `TITLE: ${result.title}\n\n` + result.scenes.map(s => 
-      `Scene ${s.scene_number}:\n- Visual: ${s.visual}\n- Camera: ${s.camera}\n- Action: ${s.action}\n- Emotion: ${s.emotion}\n- Sound: ${s.sound}\n- Transition: ${s.transition}`
+      `Scene ${s.scene_number}:\n- Visual: ${s.visual}\n- Camera: ${s.camera}\n- Action: ${s.action}\n- Emotion: ${s.emotion}\n- Sound: ${s.sound}\n- Transition: ${s.transition}${s.narration ? `\n- Narration: ${s.narration}` : ""}${s.dialogue ? `\n- Dialogue: ${s.dialogue}` : ""}`
     ).join("\n\n");
     
     const blob = new Blob([text], { type: "text/plain" });
@@ -89,6 +90,13 @@ export default function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const copySceneToClipboard = (scene: any, index: number) => {
+    const text = `Scene ${scene.scene_number}:\n- Visual: ${scene.visual}\n- Camera: ${scene.camera}\n- Action: ${scene.action}\n- Emotion: ${scene.emotion}\n- Sound: ${scene.sound}\n- Transition: ${scene.transition}${scene.narration ? `\n- Narration: ${scene.narration}` : ""}${scene.dialogue ? `\n- Dialogue: ${scene.dialogue}` : ""}`;
+    navigator.clipboard.writeText(text);
+    setCopiedSceneIndex(index);
+    setTimeout(() => setCopiedSceneIndex(null), 2000);
   };
 
   return (
@@ -235,7 +243,24 @@ export default function App() {
             )}
 
             {result && (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 pb-12">
+              <div className="space-y-6 pb-12">
+                {result.character_arc_seeds && result.character_arc_seeds.length > 0 && (
+                  <div className="bg-orange-600/5 border border-orange-600/20 rounded-lg p-6 max-w-4xl mx-auto">
+                    <h3 className="text-orange-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+                       CHARACTER ARC SEEDS
+                    </h3>
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                      {result.character_arc_seeds.map((seed, idx) => (
+                        <li key={idx} className="text-zinc-300 text-[11px] leading-relaxed flex gap-3 italic">
+                          <span className="text-orange-600/50 font-mono font-bold">{idx + 1}.</span>
+                          {seed}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {result.scenes.map((scene, idx) => (
                   <motion.div 
                     key={idx}
@@ -249,9 +274,28 @@ export default function App() {
                         SCENE {String(scene.scene_number).padStart(2, "0")}
                         <span className="text-zinc-600 font-mono font-normal text-[10px]">[{String(Math.floor((idx * 8) / 60)).padStart(2, "0")}:{String((idx * 8) % 60).padStart(2, "0")}—{String(Math.floor(((idx + 1) * 8) / 60)).padStart(2, "0")}:{String(((idx + 1) * 8) % 60).padStart(2, "0")}]</span>
                       </h3>
-                      <span className="text-[9px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-zinc-500 font-mono group-hover:text-orange-500 transition-colors uppercase">
-                        {scene.transition}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => copySceneToClipboard(scene, idx)}
+                          className={`p-1 rounded transition-all flex items-center gap-1.5 px-2 ${
+                            copiedSceneIndex === idx 
+                              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                              : 'bg-white/5 hover:bg-orange-600 hover:text-white text-zinc-500 border border-white/10'
+                          }`}
+                        >
+                          {copiedSceneIndex === idx ? <Check size={10} /> : <Copy size={10} />}
+                          <span className="text-[8px] font-black uppercase tracking-wider">
+                            {copiedSceneIndex === idx ? "Copied" : "Copy"}
+                          </span>
+                        </button>
+                        <span className={`text-[9px] border px-2 py-0.5 rounded font-mono transition-all uppercase ${
+                          ['match', 'whip', 'glitch', 'zoom', 'morph', 'j-cut', 'l-cut'].some(key => scene.transition.toLowerCase().includes(key))
+                            ? 'bg-orange-600/20 border-orange-600/50 text-orange-400 group-hover:bg-orange-600 group-hover:text-black shadow-[0_0_10px_rgba(234,88,12,0.1)]'
+                            : 'bg-white/5 border-white/10 text-zinc-500 group-hover:text-orange-500'
+                        }`}>
+                          {scene.transition}
+                        </span>
+                      </div>
                     </div>
                     <div className="space-y-3 text-[11px] leading-relaxed">
                       <div className="grid grid-cols-[50px_1fr] gap-2">
@@ -266,6 +310,20 @@ export default function App() {
                         <span className="text-zinc-600 uppercase text-[9px] font-black mt-0.5">Motion</span>
                         <p className="grow text-zinc-400 italic">{scene.action}</p>
                       </div>
+
+                      {scene.narration && (
+                        <div className="grid grid-cols-[50px_1fr] gap-2 bg-zinc-800/20 p-2 rounded border border-white/5">
+                          <span className="text-orange-600 uppercase text-[9px] font-black mt-0.5">Narasi</span>
+                          <p className="grow text-zinc-300 italic font-medium">"{scene.narration}"</p>
+                        </div>
+                      )}
+
+                      {scene.dialogue && (
+                        <div className="grid grid-cols-[50px_1fr] gap-2 bg-blue-900/10 p-2 rounded border border-blue-500/10">
+                          <span className="text-blue-400 uppercase text-[9px] font-black mt-0.5">Dialog</span>
+                          <p className="grow text-blue-100 font-bold">"{scene.dialogue}"</p>
+                        </div>
+                      )}
                       
                       <div className="flex gap-4 pt-2 mt-2 border-t border-white/5">
                         <div className="flex flex-col">
@@ -281,9 +339,10 @@ export default function App() {
                   </motion.div>
                 ))}
               </div>
-            )}
-          </div>
-        </main>
+            </div>
+          )}
+        </div>
+      </main>
       </div>
 
       {/* Footer Bar */}
